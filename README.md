@@ -9,7 +9,8 @@ The module handles Crossroads authentication and POST requests. It does not cont
 ## Usage
 
 ```powershell
-Import-Module ./Crossroads.Client/Crossroads.Client.psd1
+Install-Module Crossroads.Client
+Import-Module Crossroads.Client
 
 $token = Get-CrossroadsToken `
   -BaseUrl $env:CROSSROADS_BASE_URL `
@@ -36,3 +37,7 @@ Crossroads uses POST routes for both reads and writes. Pass `-ReadOnly` or `-All
 Invoke-Pester ./tests
 Test-ModuleManifest ./Crossroads.Client/Crossroads.Client.psd1
 ```
+
+## Versioning
+
+Tags select the major and minor version (`v1.2`). The patch version is the number of commits since that tag. Commits to `main` publish after CI; an existing gallery version is skipped.
