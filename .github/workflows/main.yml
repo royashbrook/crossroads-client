@@ -60,7 +60,7 @@ jobs:
           }
           $exists = Find-Module Crossroads.Client -RequiredVersion $version -ErrorAction SilentlyContinue
           "version=$version" >> $env:GITHUB_OUTPUT
-          "publish=$([bool](-not $exists)).ToString().ToLower()" >> $env:GITHUB_OUTPUT
+          "publish=$((-not $exists).ToString().ToLower())" >> $env:GITHUB_OUTPUT
       - name: Publish ${{ steps.version.outputs.version }}
         if: steps.version.outputs.publish == 'true'
         shell: pwsh
