@@ -1,5 +1,5 @@
 @{
-  RootModule = 'Crossroads.Client.psm1'
+  RootModule = 'CrossroadsClient.psm1'
   ModuleVersion = '1.0.0'
   GUID = '0685DAB3-9A35-40C3-BE94-DEDA22AA8628'
   Author = 'Roy Ashbrook'

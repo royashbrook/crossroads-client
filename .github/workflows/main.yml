@@ -27,9 +27,9 @@ jobs:
       - name: Validate
         shell: pwsh
         run: |
-          Test-ModuleManifest ./Crossroads.Client/Crossroads.Client.psd1 -ErrorAction Stop
+          Test-ModuleManifest ./CrossroadsClient/CrossroadsClient.psd1 -ErrorAction Stop
           Invoke-Pester ./tests -CI
-          $findings = @(Invoke-ScriptAnalyzer ./Crossroads.Client -Recurse -Severity Warning,Error)
+          $findings = @(Invoke-ScriptAnalyzer ./CrossroadsClient -Recurse -Severity Warning,Error)
           $findings | Format-Table -AutoSize
           if ($findings.Where({ $_.Severity -eq 'Error' })) { throw 'PSScriptAnalyzer found errors.' }
 
@@ -58,7 +58,7 @@ jobs:
             'publish=false' >> $env:GITHUB_OUTPUT
             exit
           }
-          $exists = Find-Module Crossroads.Client -RequiredVersion $version -ErrorAction SilentlyContinue
+          $exists = Find-Module CrossroadsClient -RequiredVersion $version -ErrorAction SilentlyContinue
           "version=$version" >> $env:GITHUB_OUTPUT
           "publish=$((-not $exists).ToString().ToLower())" >> $env:GITHUB_OUTPUT
       - name: Publish ${{ steps.version.outputs.version }}
@@ -67,8 +67,8 @@ jobs:
         env:
           PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
         run: |
-          $path = Join-Path $env:RUNNER_TEMP Crossroads.Client
-          Copy-Item ./Crossroads.Client $path -Recurse
-          Update-ModuleManifest "$path/Crossroads.Client.psd1" -ModuleVersion '${{ steps.version.outputs.version }}'
-          Test-ModuleManifest "$path/Crossroads.Client.psd1" -ErrorAction Stop
+          $path = Join-Path $env:RUNNER_TEMP CrossroadsClient
+          Copy-Item ./CrossroadsClient $path -Recurse
+          Update-ModuleManifest "$path/CrossroadsClient.psd1" -ModuleVersion '${{ steps.version.outputs.version }}'
+          Test-ModuleManifest "$path/CrossroadsClient.psd1" -ErrorAction Stop
           Publish-Module -Path $path -NuGetApiKey $env:PSGALLERY_API_KEY -Repository PSGallery

@@ -1,6 +1,6 @@
 BeforeAll {
   $root = Split-Path $PSScriptRoot -Parent
-  $modulePath = Join-Path $root 'Crossroads.Client' 'Crossroads.Client.psd1'
+  $modulePath = Join-Path $root 'CrossroadsClient' 'CrossroadsClient.psd1'
   Import-Module $modulePath -Force
 }
 
@@ -10,14 +10,14 @@ Describe 'package boundary' {
   }
 
   It 'exports only the public client commands' {
-    @((Get-Module Crossroads.Client).ExportedFunctions.Keys | Sort-Object) -join ',' |
+    @((Get-Module CrossroadsClient).ExportedFunctions.Keys | Sort-Object) -join ',' |
       Should -Be 'Get-CrossroadsToken,Invoke-CrossroadsRequest'
   }
 }
 
 Describe 'token contract' {
   BeforeEach {
-    Mock Invoke-RestMethod -ModuleName Crossroads.Client {
+    Mock Invoke-RestMethod -ModuleName CrossroadsClient {
       [pscustomobject]@{ access_token = 'test-token' }
     }
   }
@@ -28,7 +28,7 @@ Describe 'token contract' {
       -GrantType 'password'
 
     $token | Should -Be 'test-token'
-    Should -Invoke Invoke-RestMethod -ModuleName Crossroads.Client -Times 1 -ParameterFilter {
+    Should -Invoke Invoke-RestMethod -ModuleName CrossroadsClient -Times 1 -ParameterFilter {
       $Uri -eq 'https://crossroads.example/api/auth/token' -and
       $Body.grant_type -eq 'password' -and
       $Body.client_id -eq 'client-id' -and
@@ -40,7 +40,7 @@ Describe 'token contract' {
     Get-CrossroadsToken -BaseUrl 'https://crossroads.example/api' -TokenPath '/token' `
       -TokenBody @{ scope = 'carrier'; api_key = 'key' } | Should -Be 'test-token'
 
-    Should -Invoke Invoke-RestMethod -ModuleName Crossroads.Client -Times 1 -ParameterFilter {
+    Should -Invoke Invoke-RestMethod -ModuleName CrossroadsClient -Times 1 -ParameterFilter {
       $Body.scope -eq 'carrier' -and $Body.api_key -eq 'key'
     }
   }
@@ -48,7 +48,7 @@ Describe 'token contract' {
 
 Describe 'request contract' {
   BeforeEach {
-    Mock Invoke-WebRequest -ModuleName Crossroads.Client {
+    Mock Invoke-WebRequest -ModuleName CrossroadsClient {
       [pscustomobject]@{ StatusCode = 200; Content = '{"status":"synced"}' }
     }
   }
@@ -59,7 +59,7 @@ Describe 'request contract' {
       -Tenant 'tenant-a' -DestinationTenant 'tenant-b' -ReadOnly
 
     $result.http | Should -Be 200
-    Should -Invoke Invoke-WebRequest -ModuleName Crossroads.Client -Times 1 -ParameterFilter {
+    Should -Invoke Invoke-WebRequest -ModuleName CrossroadsClient -Times 1 -ParameterFilter {
       $Headers['X-Tenant-Name'] -eq 'tenant-a' -and
       $Headers['X-Dest-Tenant-Name'] -eq 'tenant-b'
     }
@@ -71,7 +71,7 @@ Describe 'request contract' {
       -Path '/v1/order/get' -Body $body -Token 'token' `
       -Tenant 'tenant-a' -DestinationTenant 'tenant-b' -ReadOnly | Out-Null
 
-    Should -Invoke Invoke-WebRequest -ModuleName Crossroads.Client -Times 1 -ParameterFilter {
+    Should -Invoke Invoke-WebRequest -ModuleName CrossroadsClient -Times 1 -ParameterFilter {
       $Body.StartsWith('[') -and $Body.EndsWith(']')
     }
   }
@@ -85,7 +85,7 @@ Describe 'request contract' {
   }
 
   It 'preserves non-http transport errors' {
-    Mock Invoke-WebRequest -ModuleName Crossroads.Client { throw 'network down' }
+    Mock Invoke-WebRequest -ModuleName CrossroadsClient { throw 'network down' }
 
     $result = Invoke-CrossroadsRequest -BaseUrl 'https://crossroads.example/api' `
       -Path '/v1/order/get' -Body @{} -Token 'token' `

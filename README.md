@@ -1,4 +1,4 @@
-# Crossroads.Client
+# CrossroadsClient
 
 Unofficial PowerShell client for the [Gravitate Crossroads Integration API](https://docs.gravitate.energy/docs/crossroads-api/index.html).
 
@@ -9,8 +9,8 @@ The module handles Crossroads authentication and POST requests. It does not cont
 ## Usage
 
 ```powershell
-Install-Module Crossroads.Client
-Import-Module Crossroads.Client
+Install-Module CrossroadsClient
+Import-Module CrossroadsClient
 
 $token = Get-CrossroadsToken `
   -BaseUrl $env:CROSSROADS_BASE_URL `
@@ -35,7 +35,7 @@ Crossroads uses POST routes for both reads and writes. Pass `-ReadOnly` or `-All
 
 ```powershell
 Invoke-Pester ./tests
-Test-ModuleManifest ./Crossroads.Client/Crossroads.Client.psd1
+Test-ModuleManifest ./CrossroadsClient/CrossroadsClient.psd1
 ```
 
 ## Versioning
