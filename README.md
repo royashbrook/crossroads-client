@@ -31,6 +31,8 @@ Invoke-CrossroadsRequest `
 
 Crossroads uses POST routes for both reads and writes. Pass `-ReadOnly` or `-AllowWrite` explicitly. Treat returned access tokens as bearer secrets and do not log them.
 
+For a prepared JSON string, pass `-Body $json -RawJson`. The client validates JSON syntax and sends the original text as UTF-8 bytes without formatting or double encoding. Object bodies keep their existing serialization behavior.
+
 ## Testing
 
 ```powershell
