@@ -52,6 +52,7 @@ function Invoke-CrossroadsRequest {
   .DESCRIPTION
   Crossroads uses POST routes for both reads and writes. Callers must declare read-only or write
   intent explicitly. HTTP responses are normalized to an object with http and data properties.
+  With RawJson, Body must be valid JSON text and is sent unchanged as UTF-8 bytes.
 
   .EXAMPLE
   Invoke-CrossroadsRequest -BaseUrl 'https://crossroads.example/api' `
@@ -63,6 +64,7 @@ function Invoke-CrossroadsRequest {
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$BaseUrl,
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$Path,
     [Parameter(Mandatory)] [object]$Body,
+    [switch]$RawJson,
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$Token,
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$Tenant,
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$DestinationTenant,
@@ -77,7 +79,13 @@ function Invoke-CrossroadsRequest {
     'X-Tenant-Name' = $Tenant
     'X-Dest-Tenant-Name' = $DestinationTenant
   }
-  $json = ConvertTo-Json -InputObject $Body -Depth 12 -Compress
+  $json = if ($RawJson) {
+    if ($Body -isnot [string] -or -not (Test-Json -Json $Body -ErrorAction Stop)) {
+      throw 'RawJson requires valid JSON text.'
+    }
+    ,[Text.Encoding]::UTF8.GetBytes($Body)
+  }
+  else { ConvertTo-Json -InputObject $Body -Depth 12 -Compress }
   try {
     $response = Invoke-WebRequest -Method Post `
       -Uri ($BaseUrl.TrimEnd('/') + '/' + $Path.TrimStart('/')) `

@@ -84,6 +84,31 @@ Describe 'request contract' {
     $result.http | Should -Be 200
   }
 
+  It 'sends raw JSON as unchanged UTF-8 without double encoding' {
+    $text = '[ {"quantity":7900.0000000000000000,"other":1.2345678901234567e3,"name":"' + [char]0x00e9 + '\\path","optional":null} ]'
+    Invoke-CrossroadsRequest -BaseUrl 'https://crossroads.example/api' `
+      -Path '/v1/order/create' -Body $text -RawJson -Token token `
+      -Tenant tenant-a -DestinationTenant tenant-b -AllowWrite | Out-Null
+
+    Should -Invoke Invoke-WebRequest -ModuleName CrossroadsClient -Times 1 -Exactly -ParameterFilter {
+      $Body -is [byte[]] -and [Text.Encoding]::UTF8.GetString($Body) -ceq $text
+    }
+  }
+
+  It 'rejects invalid raw JSON before HTTP' {
+    { Invoke-CrossroadsRequest -BaseUrl 'https://crossroads.example/api' `
+      -Path '/v1/order/get' -Body '{broken' -RawJson -Token token `
+      -Tenant tenant-a -DestinationTenant tenant-b -ReadOnly } | Should -Throw
+    Should -Invoke Invoke-WebRequest -ModuleName CrossroadsClient -Times 0 -Exactly
+  }
+
+  It 'does not accept an object as raw JSON' {
+    { Invoke-CrossroadsRequest -BaseUrl 'https://crossroads.example/api' `
+      -Path '/v1/order/get' -Body @{} -RawJson -Token token `
+      -Tenant tenant-a -DestinationTenant tenant-b -ReadOnly } | Should -Throw '*JSON text*'
+    Should -Invoke Invoke-WebRequest -ModuleName CrossroadsClient -Times 0 -Exactly
+  }
+
   It 'preserves non-http transport errors' {
     Mock Invoke-WebRequest -ModuleName CrossroadsClient { throw 'network down' }
 
