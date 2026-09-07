@@ -119,4 +119,24 @@ Describe 'request contract' {
     $result.http | Should -Be 0
     "$($result.data)" | Should -Match 'network down'
   }
+
+  It 'preserves an HTTP <Code> response and its body' -ForEach @(
+    @{ Code = 200; Content = 'accepted'; ParseError = $true }
+    @{ Code = 200; Content = '{broken'; ParseError = $true }
+    @{ Code = 200; Content = ''; ParseError = $false }
+    @{ Code = 204; Content = ''; ParseError = $false }
+    @{ Code = 200; Content = $null; ParseError = $false }
+    @{ Code = 422; Content = '{"detail":"invalid order"}'; ParseError = $false }
+    @{ Code = 503; Content = 'unavailable'; ParseError = $true }
+  ) {
+    Mock Invoke-WebRequest -ModuleName CrossroadsClient { [pscustomobject]@{ StatusCode = $Code; Content = $Content } }
+    $result = Invoke-CrossroadsRequest -BaseUrl https://example.invalid -Path /test `
+      -Body @{} -Token fake -Tenant source -DestinationTenant target -ReadOnly
+    $result.http | Should -Be $Code
+    [bool]$result.parse_error | Should -Be $ParseError
+    if ($ParseError) { $result.data | Should -BeExactly $Content }
+    elseif (-not $Content) { $result.data | Should -BeNullOrEmpty }
+    else { $result.data.detail | Should -Be 'invalid order' }
+    Should -Invoke Invoke-WebRequest -ModuleName CrossroadsClient -Times 1 -Exactly -ParameterFilter { $SkipHttpErrorCheck -and $ErrorAction -eq 'Stop' }
+  }
 }
