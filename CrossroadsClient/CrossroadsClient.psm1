@@ -37,7 +37,7 @@ function Get-CrossroadsToken {
   }
   $response = Invoke-RestMethod -Method Post `
     -Uri ($BaseUrl.TrimEnd('/') + '/' + $TokenPath.TrimStart('/')) `
-    -ContentType 'application/x-www-form-urlencoded' -Body $body -TimeoutSec $TimeoutSec
+    -ContentType 'application/x-www-form-urlencoded' -Body $body -TimeoutSec $TimeoutSec -ErrorAction Stop
   if ([string]::IsNullOrWhiteSpace($response.access_token)) {
     throw 'Crossroads token response was empty.'
   }
@@ -89,24 +89,19 @@ function Invoke-CrossroadsRequest {
   try {
     $response = Invoke-WebRequest -Method Post `
       -Uri ($BaseUrl.TrimEnd('/') + '/' + $Path.TrimStart('/')) `
-      -Headers $headers -ContentType 'application/json' -Body $json -TimeoutSec $TimeoutSec
-    $data = if ($response.Content) { $response.Content | ConvertFrom-Json } else { $null }
-    [pscustomobject]@{ http = [int]$response.StatusCode; data = $data }
+      -Headers $headers -ContentType 'application/json' -Body $json -TimeoutSec $TimeoutSec -SkipHttpErrorCheck -ErrorAction Stop
   }
   catch {
-    $responseProperty = $_.Exception.PSObject.Properties['Response']
-    $response = if ($responseProperty) { $responseProperty.Value } else { $null }
-    $content = if ($_.ErrorDetails) { "$($_.ErrorDetails.Message)" } else { '' }
-    if ([string]::IsNullOrWhiteSpace($content) -and $response) {
-      $content = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-    }
-    if ([string]::IsNullOrWhiteSpace($content)) {
-      $content = $_.Exception.Message
-    }
-    $data = try { $content | ConvertFrom-Json } catch { $content }
-    $http = if ($response) { [int]$response.StatusCode } else { 0 }
-    [pscustomobject]@{ http = $http; data = $data }
+    return [pscustomobject]@{ http = 0; data = $_.Exception.Message }
   }
+
+  $data = $null
+  $parseError = $null
+  if ($response.Content) {
+    try { $data = ConvertFrom-Json -InputObject $response.Content -ErrorAction Stop }
+    catch { $data = $response.Content; $parseError = $_.Exception.Message }
+  }
+  [pscustomobject]@{ http = [int]$response.StatusCode; data = $data; parse_error = $parseError }
 }
 
 Export-ModuleMember -Function Get-CrossroadsToken, Invoke-CrossroadsRequest

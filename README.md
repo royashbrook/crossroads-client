@@ -33,6 +33,8 @@ Crossroads uses POST routes for both reads and writes. Pass `-ReadOnly` or `-All
 
 For a prepared JSON string, pass `-Body $json -RawJson`. The client validates JSON syntax and sends the original text as UTF-8 bytes without formatting or double encoding. Object bodies keep their existing serialization behavior.
 
+Responses retain the actual HTTP status in `http`. JSON bodies are decoded into `data`; an empty body becomes null. A nonempty body that is not valid JSON is retained unchanged in `data` with `parse_error` populated. Check that field before treating a response as application success. Transport failures return `http = 0`. Token failures throw.
+
 ## Testing
 
 ```powershell
