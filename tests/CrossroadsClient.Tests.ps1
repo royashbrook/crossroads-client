@@ -11,7 +11,7 @@ Describe 'package boundary' {
 
   It 'exports only the public client commands' {
     @((Get-Module CrossroadsClient).ExportedFunctions.Keys | Sort-Object) -join ',' |
-      Should -Be 'Get-CrossroadsToken,Invoke-CrossroadsRequest'
+      Should -Be 'Get-CrossroadsToken,Invoke-CrossroadsRequest,Send-CrossroadsBolImage'
   }
 }
 
@@ -118,6 +118,13 @@ Describe 'request contract' {
 
     $result.http | Should -Be 0
     "$($result.data)" | Should -Match 'network down'
+  }
+
+  It 'can propagate the original transport exception instead of a result row' {
+    Mock Invoke-WebRequest -ModuleName CrossroadsClient { throw [TimeoutException]::new('original network failure') }
+    { Invoke-CrossroadsRequest -BaseUrl https://api.example -Path /read -Body @{} -Token token `
+      -Tenant source -DestinationTenant target -ReadOnly -ThrowOnTransportError } | Should -Throw '*original network failure*'
+    Should -Invoke Invoke-WebRequest -ModuleName CrossroadsClient -Times 1 -Exactly
   }
 
   It 'preserves an HTTP <Code> response and its body' -ForEach @(

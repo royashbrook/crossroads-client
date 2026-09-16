@@ -65,6 +65,7 @@ function Invoke-CrossroadsRequest {
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$Path,
     [Parameter(Mandatory)] [object]$Body,
     [switch]$RawJson,
+    [switch]$ThrowOnTransportError,
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$Token,
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$Tenant,
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$DestinationTenant,
@@ -92,6 +93,7 @@ function Invoke-CrossroadsRequest {
       -Headers $headers -ContentType 'application/json' -Body $json -TimeoutSec $TimeoutSec -SkipHttpErrorCheck -ErrorAction Stop
   }
   catch {
+    if ($ThrowOnTransportError) { throw }
     return [pscustomobject]@{ http = 0; data = $_.Exception.Message }
   }
 
@@ -104,4 +106,62 @@ function Invoke-CrossroadsRequest {
   [pscustomobject]@{ http = [int]$response.StatusCode; data = $data; parse_error = $parseError }
 }
 
-Export-ModuleMember -Function Get-CrossroadsToken, Invoke-CrossroadsRequest
+function Send-CrossroadsMultipart {
+  param([Net.Http.HttpClient]$Client, [uri]$Uri, [Net.Http.MultipartFormDataContent]$Form)
+  $Client.PostAsync($Uri, $Form).GetAwaiter().GetResult()
+}
+
+function Send-CrossroadsBolImage {
+  <#
+  .SYNOPSIS
+  Uploads a BOL PDF once. Source retrieval and delivery policy belong to the caller.
+  .DESCRIPTION
+  No redirects or retries. Transport exceptions propagate unchanged. A returned application
+  status is not evidence of destination recovery or visible image metadata.
+  #>
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory)][ValidatePattern('\S')][string]$BaseUrl,
+    [Parameter(Mandatory)][ValidatePattern('\S')][string]$Token,
+    [Parameter(Mandatory)][ValidatePattern('\S')][string]$Tenant,
+    [Parameter(Mandatory)][ValidatePattern('\S')][string]$DestinationTenant,
+    [Parameter(Mandatory)][ValidatePattern('\S')][string]$OrderNumber,
+    [Parameter(Mandatory)][ValidatePattern('\S')][string]$BolNumber,
+    [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*\.pdf$')][string]$FileName,
+    [Parameter(Mandatory)][byte[]]$Bytes,
+    [Parameter(Mandatory)][switch]$AllowWrite,
+    [ValidateRange(1, 3600)][int]$TimeoutSec = 30
+  )
+  if (-not $AllowWrite) { throw 'AllowWrite is required for an image upload.' }
+  if ($Bytes.Length -lt 5 -or [Text.Encoding]::ASCII.GetString($Bytes, 0, 5) -cne '%PDF-') {
+    throw 'Only PDF bytes may be uploaded.'
+  }
+  $handler = [Net.Http.HttpClientHandler]::new()
+  $handler.AllowAutoRedirect = $false
+  $client = [Net.Http.HttpClient]::new($handler)
+  $form = [Net.Http.MultipartFormDataContent]::new()
+  try {
+    $client.Timeout = [timespan]::FromSeconds($TimeoutSec)
+    $client.DefaultRequestHeaders.Authorization = [Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $Token)
+    $client.DefaultRequestHeaders.Add('X-Tenant-Name', $Tenant)
+    $client.DefaultRequestHeaders.Add('X-Dest-Tenant-Name', $DestinationTenant)
+    $form.Add([Net.Http.StringContent]::new($OrderNumber), 'order_number')
+    $form.Add([Net.Http.StringContent]::new($BolNumber), 'bol_number')
+    $file = [Net.Http.ByteArrayContent]::new($Bytes)
+    $file.Headers.ContentType = [Net.Http.Headers.MediaTypeHeaderValue]::new('application/pdf')
+    $form.Add($file, 'file', $FileName)
+    $response = Send-CrossroadsMultipart $client ($BaseUrl.TrimEnd('/') + '/v1/order/save_bol_image') $form
+    try {
+      $content = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+      $data = $null
+      $parseError = $null
+      if ($content) {
+        try { $data = $content | ConvertFrom-Json -ErrorAction Stop }
+        catch { $data = $content; $parseError = $_.Exception.Message }
+      }
+      [pscustomobject]@{ http = [int]$response.StatusCode; data = $data; parse_error = $parseError }
+    } finally { $response.Dispose() }
+  } finally { $form.Dispose(); $client.Dispose() }
+}
+
+Export-ModuleMember -Function Get-CrossroadsToken, Invoke-CrossroadsRequest, Send-CrossroadsBolImage
