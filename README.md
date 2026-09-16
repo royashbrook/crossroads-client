@@ -8,6 +8,18 @@ The module handles Crossroads authentication and POST requests. It does not cont
 
 ## Usage
 
+`Send-CrossroadsBolImage` accepts `BaseUrl`, `Token`, `Tenant`, `DestinationTenant`,
+`OrderNumber`, `BolNumber`, `FileName`, PDF `Bytes`, and explicit `-AllowWrite`.
+It sends one multipart POST to `/v1/order/save_bol_image`, without redirects or
+automatic retries. Transport errors propagate; HTTP responses retain `http`,
+`data`, and `parse_error`. HTTP acceptance is not image-readback confirmation.
+Source retrieval, receipts and replay policy belong to the integration, not this
+client. Do not log tokens or arbitrary response bodies.
+
+For JSON calls, `Invoke-CrossroadsRequest -ThrowOnTransportError` preserves the
+original transport exception. Omitting it preserves the existing `http = 0` result
+contract for callers that process failures as result rows.
+
 ```powershell
 Install-Module CrossroadsClient
 Import-Module CrossroadsClient

@@ -8,7 +8,7 @@
   Description = 'Unofficial PowerShell client for the Gravitate Crossroads Integration API.'
   PowerShellVersion = '7.2'
   CompatiblePSEditions = @('Core')
-  FunctionsToExport = @('Get-CrossroadsToken', 'Invoke-CrossroadsRequest')
+  FunctionsToExport = @('Get-CrossroadsToken', 'Invoke-CrossroadsRequest', 'Send-CrossroadsBolImage')
   CmdletsToExport = @()
   VariablesToExport = @()
   AliasesToExport = @()
