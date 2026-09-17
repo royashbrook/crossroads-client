@@ -69,6 +69,7 @@ function Invoke-CrossroadsRequest {
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$Token,
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$Tenant,
     [Parameter(Mandatory)] [ValidateNotNullOrEmpty()] [string]$DestinationTenant,
+    [ValidateNotNullOrWhiteSpace()] [string]$OriginInstance,
     [Parameter(Mandatory, ParameterSetName = 'Read')] [switch]$ReadOnly,
     [Parameter(Mandatory, ParameterSetName = 'Write')] [switch]$AllowWrite,
     [ValidateRange(1, 3600)] [int]$TimeoutSec = 60
@@ -80,6 +81,7 @@ function Invoke-CrossroadsRequest {
     'X-Tenant-Name' = $Tenant
     'X-Dest-Tenant-Name' = $DestinationTenant
   }
+  if ($OriginInstance) { $headers['X-Origin-Instance-Name'] = $OriginInstance }
   $json = if ($RawJson) {
     if ($Body -isnot [string] -or -not (Test-Json -Json $Body -ErrorAction Stop)) {
       throw 'RawJson requires valid JSON text.'
