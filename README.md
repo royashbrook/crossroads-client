@@ -20,6 +20,11 @@ For JSON calls, `Invoke-CrossroadsRequest -ThrowOnTransportError` preserves the
 original transport exception. Omitting it preserves the existing `http = 0` result
 contract for callers that process failures as result rows.
 
+`Invoke-CrossroadsRequest -OriginInstance 'source-system'` sends the optional
+`X-Origin-Instance-Name` header when the source tenant needs explicit instance
+selection. Omission leaves the header absent; explicitly blank values fail before
+HTTP. This is separate from the source and destination tenant names.
+
 ```powershell
 Install-Module CrossroadsClient
 Import-Module CrossroadsClient

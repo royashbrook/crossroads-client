@@ -61,8 +61,25 @@ Describe 'request contract' {
     $result.http | Should -Be 200
     Should -Invoke Invoke-WebRequest -ModuleName CrossroadsClient -Times 1 -ParameterFilter {
       $Headers['X-Tenant-Name'] -eq 'tenant-a' -and
-      $Headers['X-Dest-Tenant-Name'] -eq 'tenant-b'
+      $Headers['X-Dest-Tenant-Name'] -eq 'tenant-b' -and
+      -not $Headers.ContainsKey('X-Origin-Instance-Name')
     }
+  }
+
+  It 'forwards an explicit source instance without changing tenant headers' {
+    Invoke-CrossroadsRequest -BaseUrl 'https://crossroads.example/api' -Path '/v1/order/create' `
+      -Body @{origin_order_number='123'} -Token token -Tenant tenant-a -DestinationTenant tenant-b `
+      -OriginInstance 'source-system' -AllowWrite | Out-Null
+    Should -Invoke Invoke-WebRequest -ModuleName CrossroadsClient -Times 1 -Exactly -ParameterFilter {
+      $Headers['X-Origin-Instance-Name'] -ceq 'source-system' -and
+      $Headers['X-Tenant-Name'] -ceq 'tenant-a' -and $Headers['X-Dest-Tenant-Name'] -ceq 'tenant-b'
+    }
+  }
+
+  It 'rejects a blank explicit source instance before HTTP' {
+    { Invoke-CrossroadsRequest -BaseUrl 'https://crossroads.example/api' -Path '/v1/order/create' `
+      -Body @{} -Token token -Tenant tenant-a -DestinationTenant tenant-b -OriginInstance ' ' -AllowWrite } | Should -Throw
+    Should -Invoke Invoke-WebRequest -ModuleName CrossroadsClient -Times 0
   }
 
   It 'preserves a bare single-element array body' {
